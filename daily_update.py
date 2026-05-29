@@ -38,7 +38,20 @@ SYSTEM_PROMPT = (
 
 OUTPUT_SCHEMA = {
     "type": "object",
-    "properties": {"translations": {"type": "array", "items": {"type": "string"}}},
+    "properties": {
+        "translations": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer"},
+                    "en": {"type": "string"},
+                },
+                "required": ["id", "en"],
+                "additionalProperties": False,
+            },
+        }
+    },
     "required": ["translations"],
     "additionalProperties": False,
 }
@@ -69,12 +82,13 @@ def needed_strings(articles: list[dict]) -> list[str]:
     return out
 
 
-def translate_batch(client, strings: list[str]) -> list[str]:
-    """Translate a batch, returning English strings aligned by index."""
+def _translate_call(client, items: list[dict]) -> dict[int, str]:
+    """One API call. items=[{id, zh}]. Returns {id: english}, mapped by id."""
     user = (
-        'Translate each string below. Return JSON {"translations": [...]} — an array of '
-        "English strings in the SAME ORDER and SAME LENGTH as the input array. Do not add, "
-        "drop, or merge entries.\n\n" + json.dumps(strings, ensure_ascii=False, indent=2)
+        'Translate the "zh" field of each item below into English. Return JSON '
+        '{"translations": [{"id": <same id>, "en": "<translation>"}, ...]} — exactly one '
+        "object per input item, echoing its id. Translate every item.\n\n"
+        + json.dumps(items, ensure_ascii=False, indent=2)
     )
     resp = client.messages.create(
         model=MODEL,
@@ -84,10 +98,22 @@ def translate_batch(client, strings: list[str]) -> list[str]:
         output_config={"format": {"type": "json_schema", "schema": OUTPUT_SCHEMA}},
     )
     text = next(b.text for b in resp.content if b.type == "text")
-    result = json.loads(text)["translations"]
-    if len(result) != len(strings):
-        raise ValueError(f"translation length mismatch: {len(result)} vs {len(strings)}")
-    return result
+    data = json.loads(text)["translations"]
+    return {int(o["id"]): o["en"] for o in data if isinstance(o.get("en"), str) and o["en"].strip()}
+
+
+def translate_batch(client, strings: list[str]) -> list[str]:
+    """Translate a batch, mapping results back by id (robust to count drift)."""
+    out: dict[int, str] = {}
+    for _ in range(3):  # retry any ids the model drops
+        pending = [{"id": i, "zh": s} for i, s in enumerate(strings) if i not in out]
+        if not pending:
+            break
+        out.update(_translate_call(client, pending))
+    missing = [i for i in range(len(strings)) if i not in out]
+    if missing:
+        raise ValueError(f"failed to translate {len(missing)} of {len(strings)} strings")
+    return [out[i] for i in range(len(strings))]
 
 
 def main(date_str: str, dry_run: bool = False) -> None:
