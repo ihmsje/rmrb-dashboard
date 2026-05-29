@@ -1,0 +1,201 @@
+:root {
+  --red: #b21f1f;
+  --ink: #1a1a1a;
+  --muted: #6b6b6b;
+  --line: #e6e3dd;
+  --bg: #f7f5f1;
+  --card: #fff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  line-height: 1.5;
+}
+
+.wrap { max-width: 760px; margin: 0 auto; padding: 0 20px; }
+
+/* Masthead */
+.masthead {
+  background: var(--card);
+  border-bottom: 3px solid var(--red);
+  padding: 26px 0 18px;
+  text-align: center;
+}
+.masthead h1 {
+  margin: 0;
+  font-size: 34px;
+  letter-spacing: 2px;
+  color: var(--red);
+  font-weight: 700;
+}
+.masthead h1 span {
+  display: block;
+  font-size: 13px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-top: 4px;
+  font-weight: 500;
+}
+.subtitle { margin: 10px 0 0; color: var(--muted); font-size: 14px; }
+
+.datenav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 16px;
+}
+.arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px; height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 16px;
+  background: #fff;
+  transition: all .15s;
+}
+.arrow:hover { border-color: var(--red); color: var(--red); }
+.arrow.disabled { opacity: .3; pointer-events: none; }
+.datepick input {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font: inherit;
+  color: var(--ink);
+  background: #fff;
+}
+
+/* Sections */
+main { padding: 30px 0 10px; }
+section { margin-bottom: 40px; }
+.section-title {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--red);
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+  margin: 0 0 18px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.count {
+  background: var(--red);
+  color: #fff;
+  border-radius: 11px;
+  font-size: 12px;
+  padding: 1px 9px;
+  letter-spacing: 0;
+}
+.scope {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: .5px;
+  text-transform: none;
+  font-weight: 400;
+}
+
+/* Headlines */
+.headlines { list-style: none; margin: 0; padding: 0; }
+.headlines li { border-bottom: 1px solid var(--line); }
+.headline {
+  display: block;
+  padding: 14px 0;
+  text-decoration: none;
+  color: var(--ink);
+}
+.headline .cn {
+  display: block;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.headline .en {
+  display: block;
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.headline:hover .cn { color: var(--red); }
+
+/* AI cards */
+.ai-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--red);
+  border-radius: 8px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  position: relative;
+}
+.ai-card .headline { padding: 0 0 6px; }
+.ai-card .headline .cn { font-size: 17px; }
+.page-tag {
+  position: absolute;
+  top: 14px; right: 16px;
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--bg);
+  border-radius: 4px;
+  padding: 1px 7px;
+}
+.snippets { list-style: none; margin: 8px 0 0; padding: 0; }
+.snippets li {
+  border-top: 1px dashed var(--line);
+  padding: 9px 0;
+}
+.snippets .cn {
+  display: block;
+  font-size: 14.5px;
+  color: var(--ink);
+}
+.snippets .en {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* Page-1 article with no AI mention */
+.ai-card.no-ai {
+  border-left-color: var(--line);
+  background: transparent;
+}
+.no-ai-note {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #9a978f;
+  letter-spacing: .3px;
+}
+
+mark {
+  background: rgba(214, 167, 74, .28);
+  color: inherit;
+  font-weight: 500;
+  padding: 0 2px;
+  border-radius: 3px;
+}
+
+/* Empty / misc */
+.empty { text-align: center; padding: 60px 0; color: var(--muted); }
+.empty-inline { color: var(--muted); font-style: italic; }
+
+footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 20px 0 40px;
+}
+footer a { color: var(--muted); }

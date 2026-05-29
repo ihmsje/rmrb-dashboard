@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>人民日报 Reader · {{ date }}</title>
+  <link rel="stylesheet" href="{{ static_href }}">
+</head>
+<body>
+  <header class="masthead">
+    <div class="wrap">
+      <h1>人民日报 <span>People's Daily</span></h1>
+      <nav class="datenav">
+        <a class="arrow" href="{{ day_url_prefix }}{{ prev_date }}{{ day_url_suffix }}" title="Previous day">←</a>
+        <form class="datepick" onsubmit="return false">
+          <input type="date" value="{{ date }}"
+                 onchange="location.href='{{ day_url_prefix }}'+this.value+'{{ day_url_suffix }}'">
+        </form>
+        <a class="arrow {{ 'disabled' if is_future }}"
+           href="{{ day_url_prefix }}{{ next_date }}{{ day_url_suffix }}" title="Next day">→</a>
+      </nav>
+      <p class="subtitle">{{ date_display }}</p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    {% if not has_data %}
+      <section class="empty">
+        <p>No edition available for <strong>{{ date }}</strong>.</p>
+      </section>
+    {% else %}
+
+    <section>
+      <h2 class="section-title">Articles on Page 1
+        <span class="count">{{ page1|length }}</span>
+        <span class="scope">{{ p1_ai_count }} mention AI</span>
+      </h2>
+      {% for a in page1 %}
+      <article class="ai-card {{ '' if a.has_ai else 'no-ai' }}">
+        <a class="headline" href="{{ a.url }}" target="_blank" rel="noopener">
+          <span class="cn">{{ a.title }}</span>
+          <span class="en">{{ a.title_en or '—' }}</span>
+        </a>
+        {% if a.has_ai %}
+        <ul class="snippets">
+          {% for s in a.snippets %}
+          <li>
+            <span class="cn">{{ s.cn }}</span>
+            {% if s.en %}<span class="en">{{ s.en }}</span>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="no-ai-note">AI not mentioned</p>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </section>
+
+    <section>
+      <h2 class="section-title">Other articles that mention AI
+        <span class="count">{{ other_ai|length }}</span>
+        <span class="scope">pages 2+ &middot; {{ total_articles }} articles in the edition</span>
+      </h2>
+      {% if not other_ai %}
+        <p class="empty-inline">No AI mentions found beyond page 1.</p>
+      {% endif %}
+      {% for a in other_ai %}
+      <article class="ai-card">
+        <a class="headline" href="{{ a.url }}" target="_blank" rel="noopener">
+          <span class="cn">{{ a.title }}</span>
+          <span class="en">{{ a.title_en or '—' }}</span>
+        </a>
+        <span class="page-tag">p.{{ a.page }}</span>
+        <ul class="snippets">
+          {% for s in a.snippets %}
+          <li>
+            <span class="cn">{{ s.cn }}</span>
+            {% if s.en %}<span class="en">{{ s.en }}</span>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+      </article>
+      {% endfor %}
+    </section>
+
+    {% endif %}
+  </main>
+
+  <footer class="wrap">
+    <p>Source: <a href="https://paper.people.com.cn/rmrb/pc/layout/{{ date[:4] }}{{ date[5:7] }}/{{ date[8:10] }}/node_01.html" target="_blank" rel="noopener">paper.people.com.cn</a></p>
+  </footer>
+</body>
+</html>
