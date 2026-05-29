@@ -20,7 +20,9 @@ from datetime import datetime
 from scraper import DATA_DIR, get_edition, load_edition
 from ai_filter import ai_articles
 
-MODEL = os.environ.get("TRANSLATE_MODEL", "claude-opus-4-7")
+# Haiku is plenty for short zh→en news translation and ~5x cheaper than Opus.
+# Override with TRANSLATE_MODEL (e.g. "claude-sonnet-4-6") for more nuance.
+MODEL = os.environ.get("TRANSLATE_MODEL", "claude-haiku-4-5")
 BATCH_SIZE = 40
 DATE_FMT = "%Y-%m-%d"
 
