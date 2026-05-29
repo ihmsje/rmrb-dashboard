@@ -34,6 +34,31 @@ _REDIRECT = """<!doctype html>
 <body><p>Redirecting to <a href="./{latest}.html">the latest edition</a>…</p></body></html>
 """
 
+# Served by GitHub Pages for any unknown path (e.g. a directly-typed date with
+# no edition). Self-contained — no external stylesheet — and bounces to the
+# latest edition after a short, readable pause.
+_NOT_FOUND = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="refresh" content="3; url=./">
+<title>人民日报 Reader — not found</title>
+<style>
+  body {{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+         background:#f7f5f1; color:#1a1a1a; text-align:center;
+         font-family:-apple-system,"Helvetica Neue","PingFang SC",sans-serif; }}
+  .box {{ max-width:420px; padding:0 24px; }}
+  h1 {{ color:#b21f1f; font-size:22px; margin:0 0 10px; }}
+  p {{ color:#6b6b6b; font-size:15px; line-height:1.5; margin:0 0 18px; }}
+  a {{ display:inline-block; background:#b21f1f; color:#fff; text-decoration:none;
+       padding:9px 18px; border-radius:6px; font-size:14px; }}
+</style></head>
+<body><div class="box">
+  <h1>No data available for this date</h1>
+  <p>That edition hasn't been published or scraped yet. Taking you to the latest edition…</p>
+  <a href="./">Go to the latest edition</a>
+</div></body></html>
+"""
+
 
 def available_dates() -> list[str]:
     files = glob.glob(os.path.join(DATA_DIR, "edition_*.json"))
@@ -64,6 +89,9 @@ def build() -> None:
     latest = dates[-1]
     with open(os.path.join(OUT_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(_REDIRECT.format(latest=latest))
+
+    with open(os.path.join(OUT_DIR, "404.html"), "w", encoding="utf-8") as f:
+        f.write(_NOT_FOUND)
 
     print(f"Built {len(dates)} pages -> {OUT_DIR} (latest: {latest})")
 

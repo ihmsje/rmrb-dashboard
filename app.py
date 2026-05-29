@@ -1,10 +1,12 @@
 """人民日报 reader — page-1 overview + AI mentions, navigable by date."""
 
+import glob
+import os
 from datetime import datetime, timedelta
 
 from flask import Flask, abort, redirect, render_template, url_for
 
-from scraper import load_edition
+from scraper import DATA_DIR, load_edition
 from ai_filter import ai_articles
 from translate import load_translations
 from highlight import highlight_cn, highlight_en
@@ -12,6 +14,12 @@ from highlight import highlight_cn, highlight_en
 app = Flask(__name__)
 
 DATE_FMT = "%Y-%m-%d"
+
+
+def available_dates() -> list[str]:
+    """Dates that have a cached edition (and therefore a built page)."""
+    files = glob.glob(os.path.join(DATA_DIR, "edition_*.json"))
+    return sorted(os.path.basename(f)[len("edition_"):-len(".json")] for f in files)
 
 
 def parse_date(date_str: str) -> datetime:
@@ -72,6 +80,7 @@ def build_view(date_str: str) -> dict:
         "static_href": "/static/style.css",
         "day_url_prefix": "/day/",
         "day_url_suffix": "",
+        "available_dates": available_dates(),
         "has_data": bool(articles),
         "page1": page1,
         "p1_ai_count": len(p1_ai),

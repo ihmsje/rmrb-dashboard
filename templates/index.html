@@ -11,13 +11,14 @@
     <div class="wrap">
       <h1>人民日报 <span>People's Daily</span></h1>
       <nav class="datenav">
-        <a class="arrow" href="{{ day_url_prefix }}{{ prev_date }}{{ day_url_suffix }}" title="Previous day">←</a>
+        <a class="arrow" href="{{ day_url_prefix }}{{ prev_date }}{{ day_url_suffix }}"
+           onclick="return nav(event, '{{ prev_date }}')" title="Previous day">←</a>
         <form class="datepick" onsubmit="return false">
-          <input type="date" value="{{ date }}"
-                 onchange="location.href='{{ day_url_prefix }}'+this.value+'{{ day_url_suffix }}'">
+          <input type="date" value="{{ date }}" onchange="pick(this.value)">
         </form>
         <a class="arrow {{ 'disabled' if is_future }}"
-           href="{{ day_url_prefix }}{{ next_date }}{{ day_url_suffix }}" title="Next day">→</a>
+           href="{{ day_url_prefix }}{{ next_date }}{{ day_url_suffix }}"
+           onclick="return nav(event, '{{ next_date }}')" title="Next day">→</a>
       </nav>
       <p class="subtitle">{{ date_display }}</p>
     </div>
@@ -90,5 +91,38 @@
   <footer class="wrap">
     <p>Source: <a href="https://paper.people.com.cn/rmrb/pc/layout/{{ date[:4] }}{{ date[5:7] }}/{{ date[8:10] }}/node_01.html" target="_blank" rel="noopener">paper.people.com.cn</a></p>
   </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const AVAILABLE = new Set({{ available_dates|tojson }});
+    const PREFIX = "{{ day_url_prefix }}", SUFFIX = "{{ day_url_suffix }}";
+    let toastTimer;
+
+    function showToast(msg) {
+      const t = document.getElementById("toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
+    }
+
+    // Used by the prev/next links: allow navigation only if the date exists.
+    function nav(event, dateStr) {
+      if (AVAILABLE.has(dateStr)) return true;
+      event.preventDefault();
+      showToast("No data available for " + dateStr);
+      return false;
+    }
+
+    // Used by the date picker.
+    function pick(value) {
+      if (AVAILABLE.has(value)) {
+        location.href = PREFIX + value + SUFFIX;
+      } else {
+        showToast("No data available for " + value);
+      }
+    }
+  </script>
 </body>
 </html>
