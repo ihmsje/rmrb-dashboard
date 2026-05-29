@@ -3,18 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>人民日报 Reader · {{ date }}</title>
+  <title>人民日报 AI Tracker · {{ date }}</title>
   <link rel="stylesheet" href="{{ static_href }}">
 </head>
 <body>
   <header class="masthead">
     <div class="wrap">
-      <h1>人民日报 <span>People's Daily</span></h1>
+      <h1>人民日报 AI Tracker<span>People's Daily AI Tracker</span></h1>
       <nav class="datenav">
         <a class="arrow" href="{{ day_url_prefix }}{{ prev_date }}{{ day_url_suffix }}"
            onclick="return nav(event, '{{ prev_date }}')" title="Previous day">←</a>
         <form class="datepick" onsubmit="return false">
-          <input type="date" value="{{ date }}" onchange="pick(this.value)">
+          <input type="date" value="{{ date }}" onchange="pick(this)">
         </form>
         <a class="arrow {{ 'disabled' if is_future }}"
            href="{{ day_url_prefix }}{{ next_date }}{{ day_url_suffix }}"
@@ -97,6 +97,7 @@
   <script>
     const AVAILABLE = new Set({{ available_dates|tojson }});
     const PREFIX = "{{ day_url_prefix }}", SUFFIX = "{{ day_url_suffix }}";
+    const CURRENT_DATE = "{{ date }}";
     let toastTimer;
 
     function showToast(msg) {
@@ -116,11 +117,13 @@
     }
 
     // Used by the date picker.
-    function pick(value) {
+    function pick(input) {
+      const value = input.value;
       if (AVAILABLE.has(value)) {
         location.href = PREFIX + value + SUFFIX;
       } else {
         showToast("No data available for " + value);
+        input.value = CURRENT_DATE;  // revert the picker to the page's date
       }
     }
   </script>

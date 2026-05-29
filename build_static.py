@@ -30,7 +30,7 @@ _REDIRECT = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta http-equiv="refresh" content="0; url=./{latest}.html">
 <link rel="canonical" href="./{latest}.html">
-<title>人民日报 Reader</title></head>
+<title>人民日报 AI Tracker</title></head>
 <body><p>Redirecting to <a href="./{latest}.html">the latest edition</a>…</p></body></html>
 """
 
@@ -41,7 +41,7 @@ _NOT_FOUND = """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="refresh" content="3; url=./">
-<title>人民日报 Reader — not found</title>
+<title>人民日报 AI Tracker — not found</title>
 <style>
   body {{ margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
          background:#f7f5f1; color:#1a1a1a; text-align:center;
