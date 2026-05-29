@@ -6,6 +6,11 @@ on:
   schedule:
     - cron: "0 0 * * *"
   workflow_dispatch:
+    inputs:
+      date:
+        description: "Date to scrape (YYYY-MM-DD). Leave blank for today."
+        required: false
+        default: ""
 
 # Allow committing refreshed data back to the repo and deploying to Pages.
 permissions:
@@ -34,7 +39,7 @@ jobs:
       - name: Scrape + translate today's edition
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: python daily_update.py
+        run: python daily_update.py ${{ github.event.inputs.date }}
 
       - name: Commit refreshed data
         run: |
