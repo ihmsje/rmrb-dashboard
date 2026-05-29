@@ -1,11 +1,10 @@
 name: Daily People's Daily update
 
 # Runs every morning, plus on-demand via the "Run workflow" button.
-# NOTE: GitHub cron is UTC. 06:00 UTC ≈ early morning in Europe and a safe time
-# (today's edition is long published in Beijing, UTC+8). Adjust to your timezone.
+# GitHub cron is UTC. 00:00 UTC = 08:00 Beijing time (UTC+8).
 on:
   schedule:
-    - cron: "0 6 * * *"
+    - cron: "0 0 * * *"
   workflow_dispatch:
 
 # Allow committing refreshed data back to the repo and deploying to Pages.
