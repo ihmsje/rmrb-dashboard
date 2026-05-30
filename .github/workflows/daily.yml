@@ -1,13 +1,13 @@
 name: Daily People's Daily update
 
 # Runs every morning, plus on-demand via the "Run workflow" button.
-# GitHub cron is UTC. 00:17 UTC = 08:17 Beijing time (UTC+8).
-# NOTE: avoid the top of the hour (e.g. "0 0") — GitHub heavily delays/drops
-# scheduled runs at peak times like midnight UTC. An odd minute is far more
-# reliable. Scheduled runs are still best-effort and can lag 5-15+ min.
+# GitHub cron is UTC. 23:40 UTC = 07:40 the next day in Beijing (UTC+8).
+# daily_update.py derives "today" from Beijing time, so the date is correct
+# regardless of the runner's UTC clock. Avoid the top of the hour — GitHub
+# heavily delays/drops scheduled runs there. Runs are best-effort, can lag.
 on:
   schedule:
-    - cron: "17 0 * * *"
+    - cron: "40 23 * * *"
   workflow_dispatch:
     inputs:
       date:

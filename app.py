@@ -3,6 +3,7 @@
 import glob
 import os
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from flask import Flask, abort, redirect, render_template, url_for
 
@@ -14,6 +15,8 @@ from highlight import highlight_cn, highlight_en
 app = Flask(__name__)
 
 DATE_FMT = "%Y-%m-%d"
+# People's Daily editions are dated by Beijing date — anchor "today" to it.
+BEIJING = ZoneInfo("Asia/Shanghai")
 
 
 def available_dates() -> list[str]:
@@ -75,7 +78,7 @@ def build_view(date_str: str) -> dict:
         "date_display": d.strftime("%A, %B %-d, %Y"),
         "prev_date": (d - timedelta(days=1)).strftime(DATE_FMT),
         "next_date": (d + timedelta(days=1)).strftime(DATE_FMT),
-        "is_future": d.date() >= datetime.now().date(),
+        "is_future": d.date() >= datetime.now(BEIJING).date(),
         # URL shape — overridden by the static builder for flat .html output
         "static_href": "/static/style.css",
         "day_url_prefix": "/day/",
@@ -91,7 +94,7 @@ def build_view(date_str: str) -> dict:
 
 @app.route("/")
 def home():
-    return redirect(url_for("day", date_str=datetime.now().strftime(DATE_FMT)))
+    return redirect(url_for("day", date_str=datetime.now(BEIJING).strftime(DATE_FMT)))
 
 
 @app.route("/day/<date_str>")

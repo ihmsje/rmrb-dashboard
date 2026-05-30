@@ -16,6 +16,7 @@ import json
 import os
 import sys
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from scraper import DATA_DIR, get_edition, load_edition
 from ai_filter import ai_articles
@@ -25,6 +26,9 @@ from ai_filter import ai_articles
 MODEL = os.environ.get("TRANSLATE_MODEL", "claude-haiku-4-5")
 BATCH_SIZE = 40
 DATE_FMT = "%Y-%m-%d"
+# People's Daily editions are dated by Beijing date, so "today" must be the
+# date in China — not the runner's UTC date, which can lag by up to 8 hours.
+BEIJING = ZoneInfo("Asia/Shanghai")
 
 SYSTEM_PROMPT = (
     "You are a professional translator rendering text from China's People's Daily "
@@ -148,5 +152,5 @@ def main(date_str: str, dry_run: bool = False) -> None:
 if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     flags = {a for a in sys.argv[1:] if a.startswith("--")}
-    date = args[0] if args else datetime.now().strftime(DATE_FMT)
+    date = args[0] if args else datetime.now(BEIJING).strftime(DATE_FMT)
     main(date, dry_run="--dry-run" in flags)
