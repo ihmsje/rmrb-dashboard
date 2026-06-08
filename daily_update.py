@@ -106,18 +106,48 @@ def _translate_call(client, items: list[dict]) -> dict[int, str]:
     return {int(o["id"]): o["en"] for o in data if isinstance(o.get("en"), str) and o["en"].strip()}
 
 
-def translate_batch(client, strings: list[str]) -> list[str]:
-    """Translate a batch, mapping results back by id (robust to count drift)."""
-    out: dict[int, str] = {}
-    for _ in range(3):  # retry any ids the model drops
-        pending = [{"id": i, "zh": s} for i, s in enumerate(strings) if i not in out]
-        if not pending:
-            break
-        out.update(_translate_call(client, pending))
-    missing = [i for i in range(len(strings)) if i not in out]
+def translate_strings(client, strings: list[str]) -> dict[str, str]:
+    """Translate as many strings as possible; return {chinese: english}.
+
+    Resilient by design — a string the model keeps dropping must never abort
+    the run. Strategy: batched passes (mapped by id), then a per-string
+    fallback for stragglers, and finally give up on anything still missing
+    (it stays Chinese-only on the site and gets retried on the next run).
+    Never raises.
+    """
+    done: dict[int, str] = {}
+
+    # Pass 1: batched, with a couple of retries for ids the model drops.
+    for start in range(0, len(strings), BATCH_SIZE):
+        idxs = range(start, min(start + BATCH_SIZE, len(strings)))
+        for _ in range(2):
+            pending = [{"id": i, "zh": strings[i]} for i in idxs if i not in done]
+            if not pending:
+                break
+            try:
+                done.update(_translate_call(client, pending))
+            except Exception as e:  # noqa: BLE001 — keep going on any API/parse error
+                print(f"  [warn] batch translate error: {e}")
+        print(f"  translated {min(start + BATCH_SIZE, len(strings))}/{len(strings)}")
+
+    # Pass 2: one-at-a-time fallback for stragglers (almost always succeeds).
+    stragglers = [i for i in range(len(strings)) if i not in done]
+    for i in stragglers:
+        for _ in range(2):
+            try:
+                got = _translate_call(client, [{"id": i, "zh": strings[i]}])
+                if i in got:
+                    done[i] = got[i]
+                    break
+            except Exception as e:  # noqa: BLE001
+                print(f"  [warn] single translate error (#{i}): {e}")
+
+    missing = [i for i in range(len(strings)) if i not in done]
     if missing:
-        raise ValueError(f"failed to translate {len(missing)} of {len(strings)} strings")
-    return [out[i] for i in range(len(strings))]
+        print(f"  [warn] left {len(missing)} string(s) untranslated (Chinese-only; "
+              "will retry on the next run)")
+
+    return {strings[i]: en for i, en in done.items()}
 
 
 def main(date_str: str, dry_run: bool = False) -> None:
@@ -137,11 +167,7 @@ def main(date_str: str, dry_run: bool = False) -> None:
     import anthropic  # lazy: only needed on the live path
 
     client = anthropic.Anthropic()
-    for i in range(0, len(todo), BATCH_SIZE):
-        chunk = todo[i:i + BATCH_SIZE]
-        for src, english in zip(chunk, translate_batch(client, chunk)):
-            table[src] = english
-        print(f"  translated {min(i + BATCH_SIZE, len(todo))}/{len(todo)}")
+    table.update(translate_strings(client, todo))
 
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
