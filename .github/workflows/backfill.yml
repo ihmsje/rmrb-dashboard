@@ -1,0 +1,80 @@
+name: Backfill archive
+
+# On-demand backfill of historical People's Daily editions over a date range,
+# for whenever the daily archive needs to grow backwards (e.g. filling in
+# dates before the daily job started, or a gap it missed).
+#
+# Safe to re-run: backfill.py skips dates that already have cached data
+# unless "refresh" is checked, and commits progress one date at a time — so
+# a run that hits GitHub's 6-hour job limit can just be re-triggered with
+# the same range (or a narrower one) to continue where it left off.
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: "First date to backfill (YYYY-MM-DD)"
+        required: true
+      end_date:
+        description: "Last date to backfill (YYYY-MM-DD), inclusive"
+        required: true
+      refresh:
+        description: "Re-scrape dates that already have cached data"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+# Share the daily job's concurrency group so the two never race on git
+# pushes or Pages deploys.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    # Comfortably under GitHub's 360-minute hard cap for hosted runners,
+    # leaving room for the final build/upload steps.
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Backfill date range
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python backfill.py "${{ inputs.start_date }}" "${{ inputs.end_date }}" ${{ inputs.refresh == 'true' && '--refresh' || '' }}
+
+      - name: Build static site
+        run: python build_static.py
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build
+
+  deploy:
+    needs: backfill
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
