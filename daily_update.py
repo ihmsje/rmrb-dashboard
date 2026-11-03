@@ -1,4 +1,4 @@
-"""Scrape one date's full edition and auto-translate new strings via the Claude API.
+"""Scrape one date's full edition and auto-translate new strings via the Venice API.
 
 Run for today (default) or a given date:
     python daily_update.py                # today
@@ -9,11 +9,12 @@ Writes data/edition_<date>.json (via the scraper) and merges new English
 translations into data/translations_<date>.json. Idempotent: already-translated
 strings are skipped, so re-running a date only fills gaps.
 
-Requires ANTHROPIC_API_KEY in the environment for the live (non-dry-run) path.
+Requires VENICE_API_KEY in the environment for the live (non-dry-run) path.
 """
 
 import json
 import os
+import re
 import sys
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -21,9 +22,9 @@ from zoneinfo import ZoneInfo
 from scraper import DATA_DIR, get_edition, load_edition
 from ai_filter import ai_articles
 
-# Haiku is plenty for short zh→en news translation and ~5x cheaper than Opus.
-# Override with TRANSLATE_MODEL (e.g. "claude-sonnet-4-6") for more nuance.
-MODEL = os.environ.get("TRANSLATE_MODEL", "claude-haiku-4-5")
+# GLM 5.3 Flash is plenty for short zh→en news translation — cheap and fast.
+# Override with TRANSLATE_MODEL (e.g. "z-ai-glm-5-3") for more nuance.
+MODEL = os.environ.get("TRANSLATE_MODEL", "z-ai-glm-5-3-flash")
 BATCH_SIZE = 40
 DATE_FMT = "%Y-%m-%d"
 # People's Daily editions are dated by Beijing date, so "today" must be the
@@ -60,6 +61,17 @@ OUTPUT_SCHEMA = {
     "additionalProperties": False,
 }
 
+# OpenAI-style structured output (Venice supports it on models with the
+# `supportsResponseSchema` capability).
+RESPONSE_FORMAT = {
+    "type": "json_schema",
+    "json_schema": {"name": "translations", "strict": True, "schema": OUTPUT_SCHEMA},
+}
+
+# Flipped off on the first "model doesn't support response_format" rejection;
+# the run then relies on the prompt's JSON instructions instead.
+_use_response_format = True
+
 
 def translations_path(date_str: str) -> str:
     return os.path.join(DATA_DIR, f"translations_{date_str}.json")
@@ -86,23 +98,51 @@ def needed_strings(articles: list[dict]) -> list[str]:
     return out
 
 
+def _extract_json(text: str) -> dict:
+    """Parse a JSON object out of a model reply, tolerating markdown fences."""
+    text = (text or "").strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```[\w-]*\s*", "", text)
+        if text.endswith("```"):
+            text = text[:-3]
+    start, end = text.find("{"), text.rfind("}")
+    if start != -1 and end > start:
+        text = text[start : end + 1]
+    return json.loads(text)
+
+
 def _translate_call(client, items: list[dict]) -> dict[int, str]:
     """One API call. items=[{id, zh}]. Returns {id: english}, mapped by id."""
+    global _use_response_format
+    import openai  # lazy: only needed on the live path
+
     user = (
         'Translate the "zh" field of each item below into English. Return JSON '
         '{"translations": [{"id": <same id>, "en": "<translation>"}, ...]} — exactly one '
         "object per input item, echoing its id. Translate every item.\n\n"
         + json.dumps(items, ensure_ascii=False, indent=2)
     )
-    resp = client.messages.create(
-        model=MODEL,
-        max_tokens=8000,
-        system=[{"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}],
-        messages=[{"role": "user", "content": user}],
-        output_config={"format": {"type": "json_schema", "schema": OUTPUT_SCHEMA}},
-    )
-    text = next(b.text for b in resp.content if b.type == "text")
-    data = json.loads(text)["translations"]
+    kwargs: dict = {
+        "model": MODEL,
+        "max_tokens": 8000,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user},
+        ],
+        # Venice-specific: don't stack their default system prompt on ours.
+        "extra_body": {"venice_parameters": {"include_venice_system_prompt": False}},
+    }
+    if _use_response_format:
+        kwargs["response_format"] = RESPONSE_FORMAT
+    try:
+        resp = client.chat.completions.create(**kwargs)
+    except openai.BadRequestError:
+        if "response_format" not in kwargs:  # unrelated bad request — let it raise
+            raise
+        _use_response_format = False  # model rejects schemas; retry without
+        del kwargs["response_format"]
+        resp = client.chat.completions.create(**kwargs)
+    data = _extract_json(resp.choices[0].message.content)["translations"]
     return {int(o["id"]): o["en"] for o in data if isinstance(o.get("en"), str) and o["en"].strip()}
 
 
@@ -164,9 +204,12 @@ def main(date_str: str, dry_run: bool = False) -> None:
     if dry_run or not todo:
         return
 
-    import anthropic  # lazy: only needed on the live path
+    import openai  # lazy: only needed on the live path
 
-    client = anthropic.Anthropic()
+    client = openai.OpenAI(
+        api_key=os.environ["VENICE_API_KEY"],
+        base_url="https://api.venice.ai/api/v1",
+    )
     table.update(translate_strings(client, todo))
 
     os.makedirs(DATA_DIR, exist_ok=True)

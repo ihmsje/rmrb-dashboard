@@ -1,5 +1,5 @@
 flask
 requests
 beautifulsoup4
-anthropic
+openai
 tzdata
