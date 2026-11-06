@@ -56,7 +56,7 @@ jobs:
 
       - name: Backfill date range
         env:
-          VENICE_API_KEY: ${{ secrets.VENICE_API_KEY }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: |
           python backfill.py "${{ inputs.start_date }}" "${{ inputs.end_date }}" ${{ inputs.refresh == 'true' && '--refresh' || '' }}
 
