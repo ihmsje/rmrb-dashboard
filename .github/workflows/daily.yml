@@ -41,7 +41,7 @@ jobs:
 
       - name: Scrape + translate today's edition
         env:
-          VENICE_API_KEY: ${{ secrets.VENICE_API_KEY }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
         run: python daily_update.py ${{ github.event.inputs.date }}
 
       - name: Commit refreshed data
