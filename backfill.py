@@ -1,7 +1,7 @@
 """Backfill scraped + translated editions across a date range.
 
 Meant to be run from the "Backfill archive" GitHub Actions workflow, but also
-runs locally if you have VENICE_API_KEY set:
+runs locally if you have OPENCODE_API_KEY set:
 
     python backfill.py 2026-01-01 2026-05-20
     python backfill.py 2026-01-01 2026-05-20 --refresh    # re-scrape dates that already have data
