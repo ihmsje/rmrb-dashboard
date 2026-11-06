@@ -1,4 +1,4 @@
-"""Scrape one date's full edition and auto-translate new strings via the Venice API.
+"""Scrape one date's full edition and auto-translate new strings via the OpenCode Go API.
 
 Run for today (default) or a given date:
     python daily_update.py                # today
@@ -9,7 +9,7 @@ Writes data/edition_<date>.json (via the scraper) and merges new English
 translations into data/translations_<date>.json. Idempotent: already-translated
 strings are skipped, so re-running a date only fills gaps.
 
-Requires VENICE_API_KEY in the environment for the live (non-dry-run) path.
+Requires OPENCODE_API_KEY in the environment for the live (non-dry-run) path.
 """
 
 import json
@@ -23,8 +23,8 @@ from scraper import DATA_DIR, get_edition, load_edition
 from ai_filter import ai_articles
 
 # GLM 5.3 Flash is plenty for short zh→en news translation — cheap and fast.
-# Override with TRANSLATE_MODEL (e.g. "z-ai-glm-5-3") for more nuance.
-MODEL = os.environ.get("TRANSLATE_MODEL", "z-ai-glm-5-3-flash")
+# Override with TRANSLATE_MODEL (e.g. "glm-5.3") for more nuance.
+MODEL = os.environ.get("TRANSLATE_MODEL", "glm-5.3-flash")
 BATCH_SIZE = 40
 DATE_FMT = "%Y-%m-%d"
 # People's Daily editions are dated by Beijing date, so "today" must be the
@@ -61,8 +61,7 @@ OUTPUT_SCHEMA = {
     "additionalProperties": False,
 }
 
-# OpenAI-style structured output (Venice supports it on models with the
-# `supportsResponseSchema` capability).
+# OpenAI-style structured output (supported on OpenCode Go's GLM models).
 RESPONSE_FORMAT = {
     "type": "json_schema",
     "json_schema": {"name": "translations", "strict": True, "schema": OUTPUT_SCHEMA},
@@ -129,8 +128,6 @@ def _translate_call(client, items: list[dict]) -> dict[int, str]:
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user},
         ],
-        # Venice-specific: don't stack their default system prompt on ours.
-        "extra_body": {"venice_parameters": {"include_venice_system_prompt": False}},
     }
     if _use_response_format:
         kwargs["response_format"] = RESPONSE_FORMAT
@@ -205,10 +202,18 @@ def main(date_str: str, dry_run: bool = False) -> None:
         return
 
     import openai  # lazy: only needed on the live path
+    import uuid
 
     client = openai.OpenAI(
-        api_key=os.environ["VENICE_API_KEY"],
-        base_url="https://api.venice.ai/api/v1",
+        api_key=os.environ["OPENCODE_API_KEY"],
+        base_url="https://opencode.ai/inference/go/openai/v1",
+        # OpenCode Go requires callers to self-identify (see
+        # https://opencode.ai/docs/go): a stable session header per
+        # conversation/run, and a descriptive user agent.
+        default_headers={
+            "User-Agent": "rmrb-dashboard/1.0",
+            "x-opencode-session": str(uuid.uuid4()),
+        },
     )
     table.update(translate_strings(client, todo))
 
